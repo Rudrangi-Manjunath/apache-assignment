@@ -3,8 +3,6 @@ package assignment;
 import java.io.IOException;
 
 import java.sql.PreparedStatement;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
@@ -13,8 +11,6 @@ import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.transforms.Count;
-import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
@@ -25,30 +21,6 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
 
 public class Practise {
-
-    static String schemaString = "{\n" +
-            "  \"type\" : \"record\",\n" +
-            "  \"namespace\" : \"Podium\",\n" +
-            "  \"name\" : \"CardAccessConnector\",\n" +
-            "  \"fields\" : [\n" +
-            "    { \"name\" : \"building_code\" , \"type\" : \"string\" },\n" +
-            "    { \"name\" : \"equipment_code\" , \"type\" : \"string\" },\n" +
-            "    { \"name\" : \"datetime\" , \"type\" : \"string\" },\n" +
-            "    { \"name\" : \"timezone\" , \"type\" : \"string\" },\n" +
-            "    { \"name\" : \"event_type\" , \"type\" : \"string\" },\n" +
-            "    { \"name\" : \"direction\" , \"type\" : [\"null\",\"string\"], \"default\": \"null\" },\n" +
-            "    { \"name\" : \"card_id\" , \"type\" : \"string\" },\n" +
-            "    { \"name\" : \"person_type\" , \"type\" : [\"null\",\"string\"], \"default\": \"null\" },\n" +
-            "    { \"name\" : \"team\" , \"type\" : [\"null\",\"string\"], \"default\": \"null\" },\n" +
-            "    { \"name\" : \"event_id\" , \"type\" : [\"null\",\"string\"], \"default\": \"null\" },\n" +
-            "    { \"name\" : \"pdm_job_id\" , \"type\" : [\"null\",\"string\"] , \"default\": \"null\" },\n" +
-            "    { \"name\" : \"filename\" , \"type\" : [\"null\",\"string\"] , \"default\": \"null\" },\n" +
-            "    { \"name\" : \"business_unit_code\" , \"type\" : [\"null\",\"string\"], \"default\": \"null\" },\n" +
-            "    { \"name\" : \"allocated_space_code\" , \"type\" : [\"null\",\"string\"] , \"default\": \"null\" },\n"
-            +
-            "    { \"name\" : \"career_level_code\" , \"type\" : [\"null\",\"string\"] , \"default\": \"null\" }\n" +
-            "  ]\n" +
-            "}";
 
     private static boolean isValidRecord(GenericRecord record) {
         if (record.get("building_code") == null || record.get("building_code").toString().isEmpty()) {
@@ -71,10 +43,9 @@ public class Practise {
 
     public static void main(String[] args) throws IOException {
         MyOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyOptions.class);
-        // options.setRunner(DirectRunner.class);
 
         Pipeline pipeline = Pipeline.create(options);
-        Schema schema = new Schema.Parser().parse(schemaString);
+        Schema schema = new Schema.Parser().parse(Practise.class.getResourceAsStream("/Avroschema.avsc"));
 
         PCollection<String> lines = pipeline.apply("ReadLines", TextIO.read().from(options.getCSVFilePath()));
 
@@ -82,14 +53,13 @@ public class Practise {
             @ProcessElement
             public void processElement(ProcessContext c) throws IOException {
                 String line = c.element();
-                CSVFormat format = CSVFormat.DEFAULT.withHeader().withDelimiter(',');
+                CSVFormat format = CSVFormat.newFormat(',');
                 CSVRecord record = CSVProcessor.process(line, format);
                 c.output(record);
             }
         }));
 
-        List<GenericRecord> genericRecords = new ArrayList<>();
-        records.apply(ParDo.of(new DoFn<CSVRecord, GenericRecord>() {
+        PCollection<GenericRecord> recordPCollection = records.apply(ParDo.of(new DoFn<CSVRecord, GenericRecord>() {
             @ProcessElement
             public void processElement(ProcessContext c) {
                 CSVRecord record = c.element();
@@ -118,8 +88,6 @@ public class Practise {
         TupleTag<GenericRecord> badRecords = new TupleTag<GenericRecord>() {
         };
 
-        PCollection<GenericRecord> recordPCollection = pipeline.apply(Create.of(genericRecords));
-
         PCollectionTuple categorizedRecords = recordPCollection
                 .apply(ParDo.of(new DoFn<GenericRecord, GenericRecord>() {
                     @ProcessElement
@@ -136,11 +104,11 @@ public class Practise {
         PCollection<GenericRecord> goodCollection = categorizedRecords.get(goodRecords);
         goodCollection.apply(JdbcIO.<GenericRecord>write()
                 .withDataSourceConfiguration(JdbcIO.DataSourceConfiguration
-                        .create("com.postgresql.jdbc.Driver", options.getDB_url())
-                        .withUsername(options.getDB_user())
-                        .withPassword(options.getDB_password()))
+                        .create("com.postgresql.jdbc.Driver", options.getdbUrl())
+                        .withUsername(options.getdbUserName())
+                        .withPassword(options.getdbPassword()))
                 .withStatement(
-                        "INSERT INTO" + options.gettable_name()
+                        "INSERT INTO" + options.gettableName()
                                 + "(building_code, equipment_code, datetime, timezone, event_type, direction, card_id, person_type, team, event_id, pdm_job_id, filename, business_unit_code, allocated_space_code, career_level) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
                 .withPreparedStatementSetter(new JdbcIO.PreparedStatementSetter<GenericRecord>() {
                     @Override
@@ -162,10 +130,6 @@ public class Practise {
                         statement.setString(15, record.get("career_level_code").toString());
                     }
                 }));
-
-        PCollection<Long> good_records_count = goodCollection.apply(Count.globally());
-        PCollection<GenericRecord> badCollection = categorizedRecords.get(badRecords);
-        PCollection<Long> bad_records_count = badCollection.apply(Count.globally());
 
         pipeline.run();
     }

@@ -8,25 +8,25 @@ public interface MyOptions extends PipelineOptions {
 
     String getCSVFilePath();
 
-    void setSchemaPath(String schemaPath);
+    void setschemaPath(String schemaPath);
 
-    String getSchemaPath();
+    String getschemaPath();
 
-    void setDB_url(String db_url);
+    void setdbUrl(String db_url);
 
-    String getDB_url();
+    String getdbUrl();
 
-    void setDB_user(String db_user);
+    void setdbUserName(String db_user);
 
-    String getDB_user();
+    String getdbUserName();
 
-    void setDB_password(String db_password);
+    void setdbPassword(String db_password);
 
-    String getDB_password();
+    String getdbPassword();
 
-    void settable_name(String table_name);
+    void settableName(String table_name);
 
-    String gettable_name();
+    String gettableName();
 
     // @Default.Class(DirectRunner.class)
     // Class<? extends PipelineRunner<?>> getRunner();
