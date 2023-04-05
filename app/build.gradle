@@ -20,11 +20,15 @@ dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.1'
 
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+
+    implementation 'org.apache.avro:avro:1.11.1'
+
     // This dependency is used by the application.
     implementation 'com.google.guava:guava:31.1-jre'
 
    // https://mvnrepository.com/artifact/org.apache.beam/beam-runners-direct-java
-   testImplementation 'org.apache.beam:beam-runners-direct-java:2.46.0'
+   implementation 'org.apache.beam:beam-runners-direct-java:2.46.0'
 
 
      // https://mvnrepository.com/artifact/org.apache.beam/beam-sdks-java-core
@@ -39,6 +43,11 @@ dependencies {
 
      // https://mvnrepository.com/artifact/org.apache.beam/beam-sdks-java-io-jdbc
      implementation 'org.apache.beam:beam-sdks-java-io-jdbc:2.46.0'
+
+     // https://mvnrepository.com/artifact/org.postgresql/postgresql
+    implementation 'org.postgresql:postgresql:42.5.4'
+
+
 }
 
 application {

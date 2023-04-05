@@ -8,15 +8,15 @@
     { "name" : "datetime" , "type" : "string" },
     { "name" : "timezone" , "type" : "string" },
     { "name" : "event_type" , "type" : "string" },
-    { "name" : "direction" , "type" : ["null","string"], "default": "null" },
+    { "name" : "direction" , "type" : ["null","string"], "default": null },
     { "name" : "card_id" , "type" : "string" },
-    { "name" : "person_type" , "type" : ["null","string"], "default": "null" },
-    { "name" : "team" , "type" : ["null","string"], "default": "null" },
-    { "name" : "event_id" , "type" : ["null","string"], "default": "null" },
-    { "name" : "pdm_job_id" , "type" : ["null","string"] , "default": "null" },
-    { "name" : "filename" , "type" : ["null","string"] , "default": "null" },
-    { "name" : "business_unit_code" , "type" : ["null","string"], "default": "null" },
-    { "name" : "allocated_space_code" , "type" : ["null","string"] , "default": "null" },
-    { "name" : "career_level_code" , "type" : ["null","string"] , "default": "null" }
+    { "name" : "person_type" , "type" : ["null","string"], "default": null },
+    { "name" : "team" , "type" : ["null","string"], "default": null },
+    { "name" : "event_id" , "type" : ["null","string"], "default": null },
+    { "name" : "pdm_job_id" , "type" : ["null","string"] , "default": null },
+    { "name" : "filename" , "type" : ["null","string"] , "default": null },
+    { "name" : "business_unit_code" , "type" : ["null","string"], "default": null },
+    { "name" : "allocated_space_code" , "type" : ["null","string"] , "default": null },
+    { "name" : "career_level_code" , "type" : ["null","string"] , "default": null }
   ]
 }

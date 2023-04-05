@@ -8,13 +8,17 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.extensions.avro.coders.AvroCoder;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.Count;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.View;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.beam.sdk.values.TupleTag;
 import org.apache.beam.sdk.values.TupleTagList;
 import org.apache.commons.csv.CSVFormat;
@@ -45,24 +49,23 @@ public class Practise {
         MyOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyOptions.class);
 
         Pipeline pipeline = Pipeline.create(options);
+
         Schema schema = new Schema.Parser().parse(Practise.class.getResourceAsStream("/Avroschema.avsc"));
 
         PCollection<String> lines = pipeline.apply("ReadLines", TextIO.read().from(options.getCSVFilePath()));
 
-        PCollection<CSVRecord> records = lines.apply(ParDo.of(new DoFn<String, CSVRecord>() {
+        String[] headers = { "building_code", "equipment_code", "datetime", "timezone", "event_type", "direction",
+                "card_id", "person_type", "team", "event_id", "pdm_job_id", "filename", "business_unit_code",
+                "allocated_space_code", "career_level_code" };
+
+        CSVFormat csvFormat = CSVFormat.DEFAULT.builder().setHeader(headers).setDelimiter(',').build();
+
+        PCollection<GenericRecord> records = lines.apply(ParDo.of(new DoFn<String, GenericRecord>() {
             @ProcessElement
             public void processElement(ProcessContext c) throws IOException {
                 String line = c.element();
-                CSVFormat format = CSVFormat.newFormat(',');
-                CSVRecord record = CSVProcessor.process(line, format);
-                c.output(record);
-            }
-        }));
-
-        PCollection<GenericRecord> recordPCollection = records.apply(ParDo.of(new DoFn<CSVRecord, GenericRecord>() {
-            @ProcessElement
-            public void processElement(ProcessContext c) {
-                CSVRecord record = c.element();
+                CSVRecord record = CSVProcessor.process(line, csvFormat);
+                System.out.println(record);
                 GenericRecord genericRecord = new GenericData.Record(schema);
                 genericRecord.put("building_code", record.get("building_code"));
                 genericRecord.put("equipment_code", record.get("equipment_code"));
@@ -80,15 +83,16 @@ public class Practise {
                 genericRecord.put("allocated_space_code", record.get("allocated_space_code"));
                 genericRecord.put("career_level_code", record.get("career_level_code"));
                 c.output(genericRecord);
+                System.out.println(genericRecord);
             }
-        }));
+        })).setCoder(AvroCoder.of(schema));
 
         TupleTag<GenericRecord> goodRecords = new TupleTag<GenericRecord>() {
         };
         TupleTag<GenericRecord> badRecords = new TupleTag<GenericRecord>() {
         };
 
-        PCollectionTuple categorizedRecords = recordPCollection
+        PCollectionTuple categorizedRecords = records
                 .apply(ParDo.of(new DoFn<GenericRecord, GenericRecord>() {
                     @ProcessElement
                     public void processElement(ProcessContext c) {
@@ -104,12 +108,12 @@ public class Practise {
         PCollection<GenericRecord> goodCollection = categorizedRecords.get(goodRecords);
         goodCollection.apply(JdbcIO.<GenericRecord>write()
                 .withDataSourceConfiguration(JdbcIO.DataSourceConfiguration
-                        .create("com.postgresql.jdbc.Driver", options.getdbUrl())
+                        .create("org.postgresql.Driver", options.getdbUrl())
                         .withUsername(options.getdbUserName())
                         .withPassword(options.getdbPassword()))
                 .withStatement(
-                        "INSERT INTO" + options.gettableName()
-                                + "(building_code, equipment_code, datetime, timezone, event_type, direction, card_id, person_type, team, event_id, pdm_job_id, filename, business_unit_code, allocated_space_code, career_level) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+                        "INSERT INTO " + options.gettableName()
+                                + "(building_code, equipment_code, datetime, timezone, event_type, direction, card_id, person_type, team, event_id, pdm_job_id, filename, business_unit_code, allocated_space_code, career_level_code) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
                 .withPreparedStatementSetter(new JdbcIO.PreparedStatementSetter<GenericRecord>() {
                     @Override
                     public void setParameters(GenericRecord record, PreparedStatement statement) throws Exception {
@@ -130,6 +134,10 @@ public class Practise {
                         statement.setString(15, record.get("career_level_code").toString());
                     }
                 }));
+
+        PCollection<GenericRecord> badCollection = categorizedRecords.get(badRecords);
+        PCollection<Long> bad_records = badCollection.apply(Count.globally());
+        PCollection<Long> good_records_count = goodCollection.apply(Count.globally());
 
         pipeline.run();
     }
