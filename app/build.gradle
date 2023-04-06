@@ -31,8 +31,9 @@ dependencies {
    implementation 'org.apache.beam:beam-runners-direct-java:2.46.0'
 
 
-     // https://mvnrepository.com/artifact/org.apache.beam/beam-sdks-java-core
-     implementation 'org.apache.beam:beam-sdks-java-core:2.46.0'
+   // https://mvnrepository.com/artifact/org.apache.beam/beam-sdks-java-core
+   implementation 'org.apache.beam:beam-sdks-java-core:2.46.0'
+
      
     // https://mvnrepository.com/artifact/org.apache.commons/commons-csv
     implementation 'org.apache.commons:commons-csv:1.10.0'

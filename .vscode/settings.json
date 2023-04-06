@@ -3,5 +3,6 @@
     "java.configuration.updateBuildConfiguration": "automatic",
     "java.project.referencedLibraries": [
         "lib/*.jar"
-    ]
+    ],
+
 }
